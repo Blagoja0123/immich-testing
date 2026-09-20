@@ -55,8 +55,38 @@ export class AlbumDetailPage {
     return this.shareExpiryNeverButton.locator('xpath=following-sibling::button[1]');
   }
 
+  get selectPhotosButton() {
+    return this.page.getByRole('button', { name: 'Select photos', exact: true });
+  }
+
+  get addPhotosButton() {
+    return this.page.getByLabel('Add photos', { exact: true });
+  }
+
+  get addAssetsButton() {
+    return this.page.getByRole('button', { name: 'Add assets', exact: true });
+  }
+
+  get selectionMenuButton() {
+    return this.page.getByRole('button', { name: 'Menu', exact: true });
+  }
+
+  get removeFromAlbumMenuOption() {
+    return this.page.getByRole('menuitem', { name: 'Remove from album', exact: true });
+  }
+
+  get confirmButton() {
+    return this.page.getByRole('button', { name: 'Confirm', exact: true });
+  }
+
   async renameTo(newName: string) {
     await this.titleInput.fill(newName);
     await this.titleInput.blur();
+  }
+
+  async removeSelectedFromAlbum() {
+    await this.selectionMenuButton.click();
+    await this.removeFromAlbumMenuOption.click();
+    await this.confirmButton.click();
   }
 }

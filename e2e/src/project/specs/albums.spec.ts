@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/test.js';
 import { installAlbumsMock, installSharedLinkMock } from '../mocks/albums.js';
+import { installAlbumAssetsMock } from '../mocks/album-assets.js';
 import { installTimelineMock } from '../mocks/timeline.js';
 import { createAlbum, createAsset } from '../generators/data.js';
 import { AlbumsPage, AlbumDetailPage } from '../pages/AlbumPage.js';
@@ -149,5 +150,65 @@ test.describe('Albums', () => {
 
     await expect.poll(() => sharedLinkRequests.length).toBe(1);
     expect(sharedLinkRequests[0].expiresAt).not.toBeNull();
+  });
+
+  test('AB-09: adding a library asset to an album sends the request and shows it in the grid', async ({
+    page,
+    mockedApp,
+  }) => {
+    const user = await mockedApp.loginAs();
+    const album = createAlbum({ albumName: 'Holiday' });
+    const candidate = createAsset({ localDateTime: '2026-02-10T10:00:00.000Z' });
+    const albumAssets = await installAlbumAssetsMock(mockedApp.context, {
+      owner: user,
+      album,
+      initialAssets: [],
+      library: [candidate],
+    });
+
+    const detail = new AlbumDetailPage(page);
+    const timeline = new TimelinePage(page);
+    await detail.goto(album.id);
+
+    await detail.selectPhotosButton.click();
+    await expect(timeline.thumbnail(candidate.id)).toBeVisible();
+
+    await timeline.selectAsset(candidate.id);
+    await detail.addAssetsButton.click();
+
+    await expect.poll(() => albumAssets.addRequests.length).toBe(1);
+    expect(albumAssets.addRequests[0]).toEqual([candidate.id]);
+
+    await expect(timeline.thumbnail(candidate.id)).toBeVisible();
+  });
+
+  test('AB-10: removing an asset from an album sends the request and drops it from the grid', async ({
+    page,
+    mockedApp,
+  }) => {
+    const user = await mockedApp.loginAs();
+    const album = createAlbum({ albumName: 'Holiday' });
+    const kept = createAsset({ localDateTime: '2026-02-10T10:00:00.000Z' });
+    const removed = createAsset({ localDateTime: '2026-02-05T10:00:00.000Z' });
+    const albumAssets = await installAlbumAssetsMock(mockedApp.context, {
+      owner: user,
+      album,
+      initialAssets: [kept, removed],
+    });
+
+    const detail = new AlbumDetailPage(page);
+    const timeline = new TimelinePage(page);
+    await detail.goto(album.id);
+    await expect(timeline.thumbnail(kept.id)).toBeVisible();
+    await expect(timeline.thumbnail(removed.id)).toBeVisible();
+
+    await timeline.selectAsset(removed.id);
+    await detail.removeSelectedFromAlbum();
+
+    await expect.poll(() => albumAssets.removeRequests.length).toBe(1);
+    expect(albumAssets.removeRequests[0]).toEqual([removed.id]);
+
+    await expect(timeline.thumbnail(removed.id)).toHaveCount(0);
+    await expect(timeline.thumbnail(kept.id)).toBeVisible();
   });
 });
