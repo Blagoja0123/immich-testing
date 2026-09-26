@@ -3,6 +3,7 @@ import { toUuid } from '../generators/data.js';
 
 export interface UploadMockOptions {
   duplicateFileNames?: string[];
+  failUpload?: boolean;
 }
 
 
@@ -27,6 +28,13 @@ export async function installUploadMock(context: BrowserContext, options: Upload
     }
     uploadCounter += 1;
     uploads.push(uploadCounter);
+    if (options.failUpload) {
+      return route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        json: { message: 'Internal server error', statusCode: 500 },
+      });
+    }
     return route.fulfill({
       status: 201,
       contentType: 'application/json',
