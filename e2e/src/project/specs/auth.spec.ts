@@ -1,5 +1,11 @@
 import { test, expect } from '../fixtures/test.js';
-import { installPublicConfigMock, installLoginMock, installAuthenticatedUserMocks } from '../mocks/auth.js';
+import {
+  installPublicConfigMock,
+  installLoginMock,
+  installAuthenticatedUserMocks,
+  installLogoutMock,
+  installExpiredSessionMocks,
+} from '../mocks/auth.js';
 import { createUser } from '../generators/data.js';
 import { LoginPage } from '../pages/LoginPage.js';
 
@@ -89,5 +95,31 @@ test.describe('Auth / Login', () => {
 
     await expect(page).toHaveURL(/\/auth\/login/);
     await expect(login.emailInput).toBeFocused();
+  });
+
+  test('AUTH-07: signing out returns the user to the login page', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs(createUser({ email: 'valid@example.com' }));
+    await installPublicConfigMock(mockedApp.context);
+    await installLogoutMock(mockedApp.context);
+
+    await page.goto('/photos');
+
+    await page.getByRole('button', { name: `${user.name} (${user.email})` }).click();
+    await page.getByRole('link', { name: 'Sign Out', exact: true }).click();
+
+    const login = new LoginPage(page);
+    await expect(page).toHaveURL(/\/auth\/login/);
+    await expect(login.emailInput).toBeVisible();
+  });
+
+  test('AUTH-08: an expired session on a protected route redirects to login', async ({ page, mockedApp }) => {
+    await installExpiredSessionMocks(mockedApp.context);
+    await installPublicConfigMock(mockedApp.context);
+
+    await page.goto('/photos');
+
+    const login = new LoginPage(page);
+    await expect(page).toHaveURL(/\/auth\/login/);
+    await expect(login.emailInput).toBeVisible();
   });
 });

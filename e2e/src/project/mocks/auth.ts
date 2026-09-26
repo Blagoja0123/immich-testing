@@ -1,4 +1,4 @@
-import type { BrowserContext } from '@playwright/test';
+import type { BrowserContext, Route } from '@playwright/test';
 import { toUserAdminResponse, toUserPreferencesResponse, type MockUser } from '../generators/data.js';
 
 const COOKIE_HOST = '127.0.0.1';
@@ -84,4 +84,26 @@ export async function installAuthenticatedUserMocks(context: BrowserContext, use
 
 export async function markAuthenticated(context: BrowserContext) {
   await context.addCookies([{ name: 'immich_is_authenticated', value: 'true', domain: COOKIE_HOST, path: '/' }]);
+}
+
+export async function installLogoutMock(context: BrowserContext) {
+  await context.route('**/api/auth/logout', async (route) => {
+    if (route.request().method() !== 'POST') {
+      return route.fallback();
+    }
+    await context.clearCookies();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      json: { successful: true, redirectUri: '/auth/login' },
+    });
+  });
+}
+
+export async function installExpiredSessionMocks(context: BrowserContext) {
+  await markAuthenticated(context);
+  const unauthorized = (route: Route) =>
+    route.fulfill({ status: 401, contentType: 'application/json', json: { message: 'Unauthorized', statusCode: 401 } });
+  await context.route('**/api/users/me', unauthorized);
+  await context.route('**/users/me/preferences', unauthorized);
 }
