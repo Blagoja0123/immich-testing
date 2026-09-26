@@ -79,9 +79,32 @@ export class AlbumDetailPage {
     return this.page.getByRole('button', { name: 'Confirm', exact: true });
   }
 
+  get descriptionInput() {
+    return this.page.getByPlaceholder('Add a description', { exact: true });
+  }
+
+  get albumOptionsMenuButton() {
+    return this.page.getByRole('button', { name: 'Album options', exact: true });
+  }
+
+  get deleteAlbumMenuOption() {
+    return this.page.getByRole('menuitem', { name: 'Delete album', exact: true });
+  }
+
   async renameTo(newName: string) {
     await this.titleInput.fill(newName);
     await this.titleInput.blur();
+  }
+
+  async editDescriptionTo(description: string) {
+    await this.descriptionInput.fill(description);
+    await this.descriptionInput.blur();
+  }
+
+  async deleteAlbum() {
+    await this.albumOptionsMenuButton.click();
+    await this.deleteAlbumMenuOption.click();
+    await this.confirmButton.click();
   }
 
   async removeSelectedFromAlbum() {

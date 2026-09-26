@@ -211,4 +211,49 @@ test.describe('Albums', () => {
     await expect(timeline.thumbnail(removed.id)).toHaveCount(0);
     await expect(timeline.thumbnail(kept.id)).toBeVisible();
   });
+
+  test('AB-11: deleting an album redirects back to the albums list', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs();
+    const album = createAlbum({ albumName: 'To Delete' });
+    await installAlbumsMock(mockedApp.context, { owner: user, albums: [album] });
+    await installTimelineMock(mockedApp.context, []);
+
+    const detail = new AlbumDetailPage(page);
+    await detail.goto(album.id);
+    await expect(detail.titleInput).toHaveValue('To Delete');
+
+    const [request] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes(`/api/albums/${album.id}`) && r.method() === 'DELETE'),
+      detail.deleteAlbum(),
+    ]);
+
+    expect(request.method()).toBe('DELETE');
+    await expect(page).toHaveURL(/\/albums(\?|$)/);
+  });
+
+  test('AB-12: editing an album description persists across reload', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs();
+    const album = createAlbum({ albumName: 'Described' });
+    await installAlbumsMock(mockedApp.context, { owner: user, albums: [album] });
+    await installTimelineMock(mockedApp.context, []);
+
+    const detail = new AlbumDetailPage(page);
+    await detail.goto(album.id);
+    await detail.editDescriptionTo('Our summer holiday');
+
+    await page.reload();
+    await expect(detail.descriptionInput).toHaveValue('Our summer holiday');
+  });
+
+  test('AB-13: an album with no assets shows the empty placeholder', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs();
+    const album = createAlbum({ albumName: 'Empty' });
+    await installAlbumsMock(mockedApp.context, { owner: user, albums: [album] });
+    await installTimelineMock(mockedApp.context, []);
+
+    const detail = new AlbumDetailPage(page);
+    await detail.goto(album.id);
+
+    await expect(detail.selectPhotosButton).toBeVisible();
+  });
 });

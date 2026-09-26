@@ -1,5 +1,5 @@
 import { expect, test } from '../fixtures/test.js';
-import { createAsset } from '../generators/data.js';
+import { createAsset, createUser } from '../generators/data.js';
 import { installTimelineMock } from '../mocks/timeline.js';
 import { TimelinePage } from '../pages/TimelinePage.js';
 
@@ -133,8 +133,85 @@ test.describe('Timeline & Asset Viewer', () => {
     await expect(timeline.favoriteIcon(assets[0].id)).toHaveCount(0);
 
     await timeline.selectAsset(assets[0].id);
-    await timeline.favoriteButton.click();
+    const [request] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes('/api/assets') && r.method() === 'PUT'),
+      timeline.favoriteButton.click(),
+    ]);
 
+    expect(request.postDataJSON()).toMatchObject({ ids: [assets[0].id], isFavorite: true });
     await expect(timeline.favoriteIcon(assets[0].id)).toHaveCount(1);
+  });
+
+  test('TL-09: archiving a selected asset removes it from the timeline', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs();
+    const assets = [createAsset({ localDateTime: '2026-02-10T10:00:00.000Z' })];
+    await installTimelineMock(mockedApp.context, assets, { ownerId: user.id });
+
+    const timeline = new TimelinePage(page);
+    await timeline.goto();
+    await timeline.selectAsset(assets[0].id);
+
+    const [request] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes('/api/assets') && r.method() === 'PUT'),
+      timeline.archiveSelected(),
+    ]);
+
+    expect(request.postDataJSON()).toMatchObject({ ids: [assets[0].id], visibility: 'archive' });
+    await expect(timeline.thumbnail(assets[0].id)).toHaveCount(0);
+  });
+
+  test('TL-10: deleting a selected asset removes it from the timeline', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs();
+    const asset = createAsset({ localDateTime: '2026-02-10T10:00:00.000Z' });
+    await installTimelineMock(mockedApp.context, [asset], { ownerId: user.id });
+
+    const timeline = new TimelinePage(page);
+    await timeline.goto();
+    await timeline.selectAsset(asset.id);
+
+    const [request] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes('/api/assets') && r.method() === 'DELETE'),
+      timeline.deleteSelected(),
+    ]);
+
+    expect(request.postDataJSON()).toMatchObject({ ids: [asset.id], force: false });
+    await expect(timeline.thumbnail(asset.id)).toHaveCount(0);
+  });
+
+  test('TL-11: select-all selects every asset and unselect-all clears the selection', async ({ page, mockedApp }) => {
+    const user = await mockedApp.loginAs();
+    const assets = [
+      createAsset({ localDateTime: '2026-02-10T10:00:00.000Z' }),
+      createAsset({ localDateTime: '2026-02-05T10:00:00.000Z' }),
+    ];
+    await installTimelineMock(mockedApp.context, assets, { ownerId: user.id });
+
+    const timeline = new TimelinePage(page);
+    await timeline.goto();
+    await timeline.selectAsset(assets[0].id);
+
+    await timeline.selectAllButton.click();
+    await expect(timeline.selectCheckbox(assets[0].id)).toBeChecked();
+    await expect(timeline.selectCheckbox(assets[1].id)).toBeChecked();
+
+    await timeline.unselectAllButton.click();
+    await expect(timeline.selectAllButton).toHaveCount(0);
+  });
+
+  test('TL-12: the Favorite action is hidden when the selection includes an asset you do not own', async ({
+    page,
+    mockedApp,
+  }) => {
+    const user = await mockedApp.loginAs();
+    const foreignOwner = createUser();
+    const assets = [createAsset({ localDateTime: '2026-02-10T10:00:00.000Z', ownerId: foreignOwner.id })];
+    await installTimelineMock(mockedApp.context, assets, { ownerId: user.id });
+
+    const timeline = new TimelinePage(page);
+    await timeline.goto();
+    await timeline.selectAsset(assets[0].id);
+
+    await expect(timeline.selectAllButton).toBeVisible();
+    await expect(timeline.favoriteButton).toHaveCount(0);
   });
 });

@@ -32,7 +32,7 @@ export function buildBucketPayload(assets: MockAsset[], timeBucket: string, owne
   const bucketAssets = assets.filter((asset) => bucketKeyFor(asset.localDateTime) === timeBucket);
   return {
     id: bucketAssets.map((a) => a.id),
-    ownerId: bucketAssets.map(() => ownerId),
+    ownerId: bucketAssets.map((a) => a.ownerId ?? ownerId),
     isFavorite: bucketAssets.map((a) => a.isFavorite),
     isImage: bucketAssets.map((a) => a.type === 'IMAGE'),
     isTrashed: bucketAssets.map(() => false),
@@ -59,7 +59,7 @@ export function buildAssetDetail(asset: MockAsset, ownerId: string) {
     localDateTime: asset.localDateTime,
     fileCreatedAt: asset.localDateTime,
     fileModifiedAt: asset.localDateTime,
-    ownerId,
+    ownerId: asset.ownerId ?? ownerId,
     exifInfo: {},
     tags: [],
   };
@@ -107,15 +107,24 @@ export async function installTimelineMock(
   });
 
   await context.route('**/api/assets', async (route) => {
-    if (route.request().method() !== 'PUT') {
-      return route.fallback();
+    const method = route.request().method();
+    if (method === 'PUT') {
+      const body = route.request().postDataJSON() as { ids: string[]; isFavorite?: boolean; visibility?: string };
+      for (const asset of assets) {
+        if (!body.ids.includes(asset.id)) continue;
+        if (body.isFavorite !== undefined) asset.isFavorite = body.isFavorite;
+        if (body.visibility !== undefined) asset.isArchived = body.visibility === 'archive';
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', json: {} });
     }
-    const body = route.request().postDataJSON() as { ids: string[]; isFavorite?: boolean; visibility?: string };
-    for (const asset of assets) {
-      if (!body.ids.includes(asset.id)) continue;
-      if (body.isFavorite !== undefined) asset.isFavorite = body.isFavorite;
-      if (body.visibility !== undefined) asset.isArchived = body.visibility === 'archive';
+    if (method === 'DELETE') {
+      const body = route.request().postDataJSON() as { ids: string[] };
+      for (const id of body.ids) {
+        const index = assets.findIndex((a) => a.id === id);
+        if (index >= 0) assets.splice(index, 1);
+      }
+      return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
     }
-    return route.fulfill({ status: 200, contentType: 'application/json', json: {} });
+    return route.fallback();
   });
 }

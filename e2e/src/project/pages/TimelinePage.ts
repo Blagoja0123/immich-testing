@@ -15,6 +15,26 @@ export class TimelinePage {
     return this.page.getByLabel('Favorite', { exact: true });
   }
 
+  get selectAllButton() {
+    return this.page.getByRole('button', { name: 'Select all', exact: true });
+  }
+
+  get unselectAllButton() {
+    return this.page.getByRole('button', { name: 'Unselect all', exact: true });
+  }
+
+  get selectionMenuButton() {
+    return this.page.getByRole('button', { name: 'Menu', exact: true });
+  }
+
+  get archiveMenuOption() {
+    return this.page.getByRole('menuitem', { name: 'Archive', exact: true });
+  }
+
+  get deleteMenuOption() {
+    return this.page.getByRole('menuitem', { name: 'Delete', exact: true });
+  }
+
   get removeFromFavoritesButton() {
     return this.page.getByLabel('Remove from favorites', { exact: true });
   }
@@ -69,5 +89,15 @@ export class TimelinePage {
   async selectAsset(assetId: string) {
     await this.thumbnail(assetId).hover();
     await this.selectCheckbox(assetId).click();
+  }
+
+  async archiveSelected() {
+    await this.selectionMenuButton.click();
+    await this.archiveMenuOption.click();
+  }
+
+  async deleteSelected() {
+    await this.selectionMenuButton.click();
+    await this.deleteMenuOption.click();
   }
 }

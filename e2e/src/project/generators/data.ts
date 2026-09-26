@@ -72,6 +72,7 @@ export interface MockAsset {
   isFavorite: boolean;
   isArchived: boolean;
   localDateTime: string;
+  ownerId?: string;
 }
 
 export function createAsset(overrides: Partial<MockAsset> = {}): MockAsset {
@@ -83,6 +84,7 @@ export function createAsset(overrides: Partial<MockAsset> = {}): MockAsset {
     isFavorite: overrides.isFavorite ?? false,
     isArchived: overrides.isArchived ?? false,
     localDateTime: overrides.localDateTime ?? '2026-01-15T12:00:00.000Z',
+    ownerId: overrides.ownerId,
   };
 }
 
@@ -90,6 +92,7 @@ export interface MockAlbum {
   id: string;
   albumName: string;
   assetCount: number;
+  description?: string;
 }
 
 export function createAlbum(overrides: Partial<MockAlbum> = {}): MockAlbum {
@@ -98,6 +101,7 @@ export function createAlbum(overrides: Partial<MockAlbum> = {}): MockAlbum {
     id: overrides.id ?? toUuid('c', albumCounter),
     albumName: overrides.albumName ?? `Test Album ${albumCounter}`,
     assetCount: overrides.assetCount ?? 0,
+    description: overrides.description ?? '',
   };
 }
 
@@ -105,7 +109,7 @@ export function toAlbumResponse(album: MockAlbum, owner: MockUser) {
   return {
     id: album.id,
     albumName: album.albumName,
-    description: '',
+    description: album.description ?? '',
     albumThumbnailAssetId: null,
     albumUsers: [
       {

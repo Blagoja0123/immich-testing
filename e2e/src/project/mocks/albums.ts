@@ -37,9 +37,16 @@ export async function installAlbumsMock(context: BrowserContext, options: Albums
     }
 
     if (route.request().method() === 'PATCH') {
-      const body = route.request().postDataJSON() as { albumName?: string };
+      const body = route.request().postDataJSON() as { albumName?: string; description?: string };
       if (body.albumName !== undefined) album.albumName = body.albumName;
+      if (body.description !== undefined) album.description = body.description ?? '';
       return route.fulfill({ status: 200, contentType: 'application/json', json: toAlbumResponse(album, owner) });
+    }
+
+    if (route.request().method() === 'DELETE') {
+      const index = albums.findIndex((a) => a.id === id);
+      if (index >= 0) albums.splice(index, 1);
+      return route.fulfill({ status: 200, contentType: 'application/json', json: {} });
     }
 
     return route.fulfill({ status: 200, contentType: 'application/json', json: toAlbumResponse(album, owner) });
