@@ -19,6 +19,8 @@
     "format": "prettier --cache --check .",
     "format:fix": "prettier --cache --write --list-different .",
     "test": "vitest",
+    "test:student": "vitest run --config vitest.student.config.ts",
+    "test:student:coverage": "vitest run --config vitest.student.config.ts --coverage",
     "test:cov": "vitest --coverage",
     "test:watch": "vitest dev",
     "prepare": "svelte-kit sync"

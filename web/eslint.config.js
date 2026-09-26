@@ -80,6 +80,8 @@ export default typescriptEslint.config(
       'tailwind.config.js',
       'coverage',
       'vite.config.ts',
+      'vitest.student.config.ts',
+      'coverage-student',
     ],
   },
   typescriptEslint.configs.recommended,
